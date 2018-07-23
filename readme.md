@@ -1,6 +1,9 @@
 # Introduction
 
-**Describe basics of the project, blah blah**
+- Describe main ideas
+- Describe user flow
+- Ask clarifying questions
+- Read vs. Write oriented
 
 ## Clarifying questions
 
@@ -147,6 +150,26 @@ OR
 
 Folders and files are all considered objects in S3 (even though it might not seem that way to us!). There are libraries out there that allow you to created a zipped file containing a directory. You make a `GET` request to obtain all of the files (or the whole project) from S3, iterate over those objects, and append them to a zipped file. Then just download that file.
 
+# Data model
+
+Contractor: name, etc.: projects: [1, 2, 3]
+
+Subcontractor: name, etc., projects: [1, 2, 3]
+
+Project: creator_id, name, files: [1, 2, 3]
+
+File Object: file path ('blah/blah/blah.png'), file_type, last_updated
+
+**_Assumption_**: This system assumes that each project will look the same to contractors and subcontractors. However, we might want projects to look different, for example we might want some metadata about projects:
+
+Contractors:
+
+Subcontractors:
+
+- Which files have they downloaded?
+- Which files have they downloaded that are the most recent version of the file?
+- How many times have they downloaded files?
+
 # Additional problems
 
 **Microservice vs. Monolith**
@@ -212,6 +235,8 @@ Subcontractors:
 - when files are downloaded
 - when files are downloaded in bulk vs. one at a time
 - how long downloads take
+
+\*_Maybe MapReduce to organize this data? Or just do it dynamically since we know what we're looking for\*_
 
 <a name="acid"></a>
 
