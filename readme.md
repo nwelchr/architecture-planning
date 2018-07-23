@@ -123,7 +123,7 @@ Three possibilities for file names in the same folder:
 
 - Just send multiple files over and have the transaction iterate over each. Two options for persisting:
   1.) Wait until all files have uploaded successfully. Roll back any uploads if one fails. (Promise.all)
-  2.) (More reasonable): Update information in DB as each resolves. Ones that fail ned to be individually re-uploaded
+  2.) (More reasonable): Update information in DB as each resolves. Ones that fail need to be individually re-uploaded
 
 # Deliverable 2: File download
 
@@ -148,6 +148,19 @@ OR
 Folders and files are all considered objects in S3 (even though it might not seem that way to us!). There are libraries out there that allow you to created a zipped file containing a directory. You make a `GET` request to obtain all of the files (or the whole project) from S3, iterate over those objects, and append them to a zipped file. Then just download that file.
 
 # Additional problems
+
+**Microservice vs. Monolith**
+
+Pros of Microservices:
+
+- Easier to scale, test, debug, etc. individual pieces
+- Less training needed for a developer to understand that piec of the service
+- Bugs don't bring down the whole system
+
+Pros of Monolith:
+
+- Service is simple to think of as a whole
+- Faster (all logic is in one place, network calls are needed less)
 
 **How do I improve read times on my site?**
 
