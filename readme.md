@@ -1,16 +1,18 @@
 # Introduction
 
-**Describe basics of the project**
+**Describe basics of the project, blah blah**
 
 ## Clarifying questions
 
-- What is a project? Can you specify start and end dates for bidding? Can you specify start and stop dates for that project?
+- What is a "project" exactly? Can you specify start and end dates for bidding? Can you specify start and stop dates for that project?
 
-- “Equip GCs with the means to SEND files to their subs.” The image shows a contractor is able to have folders of their own. How is access granted to subs and who can actually see the project? Does the GC literally _send_ files over to the subs?
+- “Equip GCs with the means to SEND files to their subs.” The image shows a contractor is able to have folders of their own. How is access granted to subs and who can actually see the project? Or do all subs have access to all projects? Does the GC literally _send_ files over to the subs?
 
-- There are [success-metrics](primary success metrics) at the bottom. Is it my goal to describe how I would track these pieces of data or should I just base my solution around these metrics?
+- There are [primary success metrics](success-metrics) at the bottom. Is it my goal to describe how I would track these pieces of data or should I just base my solution around these metrics?
 
 ## Assumptions
+
+- GCs have fast enough networks speeds to upload files at a reasonable rate. Subs have fast enough networks to download files at a reasonable rate.
 
 - Security isn't an issue and has already been configured through session and CSRF authentication tokens as well as DB, model, and frontend-level constraints. We can discuss possible implementations of security measures at the end if needed.
 
@@ -30,15 +32,13 @@ Self-explanatory.
 
 **_ASSUMPTION_**: There is already some type of authentication in place
 
-**CLARIFYING QUESTION**: Do I need to be able to delete files?
-
 - `GET /:project_id` - get project
 - `GET /:project_id/:folder_id` - get particular folder
 - `POST /:project_id/:folder_id` - create folder
 - `DELETE /:project_id/:folder_id` - delete folder
-- `POST /:project_id/:folder_id/upload` - upload file(s)
-- `GET /:project_id/:folder_id/download` - download file(s)
-- `DELETE /:project_id/:folder_id/:file_id` - delete file(s)
+- `POST /:project_id/:folder_id/upload` - upload file(s) (file in params)
+- `GET /:project_id/:folder_id/download` - download file(s) (file_names in params)
+- `DELETE /:project_id/:folder_id/delete_files` - delete file(s) (file_names in params)
 
 **How do I handle all these requests coming in? We're talking about terabytes of file transfers and tens of thousands of construction companies interacting with our app in real time.**
 
@@ -47,24 +47,28 @@ Scaling!!! Smaller startups would normally use vertical scaling to get an initia
 - Good way to do this: Amazon EC2. You guys are still growing fast, so you'll need something that can scale with your website without you needing to configure everything.
 
 **Okay, now I have more servers... but how do I make sure they're all synchronized? What happens if some server crashes?**
-Use a metadata manager.
+
+Use a metadata manager / load balancer. Some possibilities:
+
+- Elastic Load Balancer. Easy to configure with other AWS services
+- Zookeeper. Really good at synchronizing many servers. Can also use range-based data allocation to prevent data collision while still synchronizing between thousands of servers
+- Round-robin load balancing (MAJOR CON: will ping servers that are already overloaded with requests. This is especially important to avoid because file uploads could take a while, and the server will have to be active as a file is getting uploaded, which we will discuss in a bit)
 
 ### Database:
-
-The main issue is we have uploaded files and other data (about GCs, subs, projects, bids, etc.).
 
 Blob storage (AWS S3) + DB (MongoDB, DynamoDB, etc.)
 
 - AWS S3 storage for individual files:
+
   - Unlimited file storage and incredible scalability
   - Easily configurable with other AWS services
 
-So for this DB, we can choose a NoSQL vs. SQL database. NoSQL is more scalable.
+- DB for other data (about GCs, subs, projects, bids, etc.). We can choose a NoSQL vs. SQL database. NoSQL is more scalable:
 
-- Sacrifices [acid](ACID-compliancy) for greater freedom
-- No joins / transactions, lower latency and faster write sped
+- Sacrifices [ACID-compliancy](acid) for greater freedom
+- No joins / transactions, lower latency and faster write speed
 - Easier to configure. SQL databases can scale, but require experts
-- Sharding and horizontal scaling
+- Easier for sharding and horizontal scaling
 
 # Deliverable 1: File upload
 
@@ -134,11 +138,30 @@ We can assume that auth is already embedded in the app. Each request will be sig
 **What if my users are all far away from each other?**
 We need multiple data centers to distribute the load geographically. This will improve read time at the expense of storing more data in more places. This is best managed through a CDN or Edge interface (AWS Cloudfront or AWS Lambda@Edge)
 
+**What if I want to track whether a file has been updated? (UI question)**
+
+- Attach ETag onto response header (identifier for a specific version of a resource)
+  - Also allows caches to be more efficient as mentioned before!
+- Append some metadata onto subcontractor’s instance of a project
+- Use a notification server that connects a project with all of the subcontractors that have interacted with that project
+
 # Extra notes
 
 <a name="success-metrics"></a>
 
 ### Primary Success Metrics:
+
+General Contractors:
+
+- how many of their projects have files uploaded to them
+- how many files are uploaded per project
+- file types uploaded
+
+Subcontractors:
+
+- when files are downloaded
+- when files are downloaded in bulk vs. one at a time
+- how long downloads take
 
 <a name="acid"></a>
 
