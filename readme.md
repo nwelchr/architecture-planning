@@ -46,16 +46,20 @@ Scaling!!! Smaller startups would normally use vertical scaling to get an initia
 
 - Good way to do this: Amazon EC2. You guys are still growing fast, so you'll need something that can scale with your website without you needing to configure everything.
 
-**Okay, now I have more servers... but how do I make sure they're all synchronized? What happens if some server crashes?**
+**Okay, now I have more servers... but how do I make sure they're all synchronized? How do I ensure all those servers are actually receiving requests? What happens if some server crashes?**
 
 Use a metadata manager / load balancer. Some possibilities:
 
 - Elastic Load Balancer. Easy to configure with other AWS services
+
+Two ways to keep track of servers:
+
 - Zookeeper. Really good at synchronizing many servers. Can also use range-based data allocation to prevent data collision while still synchronizing between thousands of servers
 - Round-robin load balancing (MAJOR CON: will ping servers that are already overloaded with requests. This is especially important to avoid because file uploads could take a while, and the server will have to be active as a file is getting uploaded, which we will discuss in a bit)
 
 ### Database:
 
+Two kinds of data: files and metadata about files/users/etc.
 Blob storage (AWS S3) + DB (MongoDB, DynamoDB, etc.)
 
 - AWS S3 storage for individual files:
@@ -72,16 +76,27 @@ Blob storage (AWS S3) + DB (MongoDB, DynamoDB, etc.)
 
 # Deliverable 1: File upload
 
-**Problem**: when a user makes requests it has to upload the file to S3, return info about the uploaded object, then persist that information to the database under that project. This potentially slows things down because every upload request requires multiple transactions.
+1.) Get file from computer and put it into the server
+
+First way
+2.) Create a read stream
+3.) Pipe the file into the bucket
+
+Second way
+2.) Convert the file to base64
+3.) Store in S3
 
 What comes back as payload from S3 upload: folder_name, file_name, file_type, file_size, last_updated, etc.
 
+**Problem**: when a user makes requests it has to upload the file to S3, return info about the uploaded object, then persist that information to the database under that project. This potentially slows things down because every upload request requires multiple transactions.
+
 Possible solution: store it all in one DB
 
-- Store the bites of a dile directly in a column / record on a table / collection
+- Store the bytes of a file directly in a column
 - Add whatever metadata you want to the table / collection
 
 **How do I ensure that the GC is the only one with write access to a project?**
+
 `project.creatorId === currentUser.id`
 
 **How do we make sure there are no collisions in filenames?**
@@ -113,29 +128,51 @@ Three possibilities for file names in the same folder:
 # Deliverable 2: File download
 
 Two possibilities:
-1.)
+
+1.) Proxy download from S3 service
+
+- Get file from S3 and bring it to server
+- Create a read stream
+- Pipe the response stream into a file
+- Download that file
+
+OR
+
+2.) Direct download from S3
+
+- Get the download url for the file from your DB
+- Redirect to the download URL
 
 **What if I want multi/all-file download?**
+
 Folders and files are all considered objects in S3 (even though it might not seem that way to us!). There are libraries out there that allow you to created a zipped file containing a directory. You make a `GET` request to obtain all of the files (or the whole project) from S3, iterate over those objects, and append them to a zipped file. Then just download that file.
 
 # Additional problems
 
 **How do I improve read times on my site?**
+
 Caching. Using a cache like Redis or Memcache can vastly speed up read times by eliminating the need to query the entire database.
 We could cache projects that
 
 **How can I speed up downloads?**
+
 Using ETags for file requests improves caching speed. The server can just check whether the version of a file is the same as a previously downloaded version (rather than all of its contents) and access a cached version of the file if it's been downloaded before.
 
 **So I just keep storing files forever? Do I ever want to migrate content off AWS or delete it?**
 
+- If you want to save space from the start on S3, you can upload smaller files there and larger files to a data warehouse (harder to access)
+- If the project is expired or bidding is finished, you can migrate all the project files to a data warehouse. That way you are saving space on S3 for what's most important.
+
 **How do I backup my data?**
+
 Backup data to a data warehouse every hour. Pipe data from S3 into a data warehouse (e.g. Alooma). Restore data from the warehouse if there are problems with S3.
 
 **What about security and authentication?**
+
 We can assume that auth is already embedded in the app. Each request will be signed with CSRF.
 
 **What if my users are all far away from each other?**
+
 We need multiple data centers to distribute the load geographically. This will improve read time at the expense of storing more data in more places. This is best managed through a CDN or Edge interface (AWS Cloudfront or AWS Lambda@Edge)
 
 **What if I want to track whether a file has been updated? (UI question)**
