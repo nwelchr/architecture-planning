@@ -1,18 +1,20 @@
 # Introduction
 
+**Describe basics of the project**
+
 ## Clarifying questions
 
-- What is a project? Can you specify start and end dates for bidding? Can you specify start and stop dates for that project's ?
+- What is a project? Can you specify start and end dates for bidding? Can you specify start and stop dates for that project?
 
-- “Equip GCs with the means to SEND files to their subs.” The image shows a contractor is able to have folders of their own. How is access granted to subs and who can actually see the project?
+- “Equip GCs with the means to SEND files to their subs.” The image shows a contractor is able to have folders of their own. How is access granted to subs and who can actually see the project? Does the GC literally _send_ files over to the subs?
 
-- Where are contractors and subcontractors located? Is it just in the SF area or is it worldwide?
-
-- There are [success-metrics](primary success metrics) at the bottom. Is it my goal to describe how I would implement these or should I just base my solution around the fact that these metrics are the most important?
+- There are [success-metrics](primary success metrics) at the bottom. Is it my goal to describe how I would track these pieces of data or should I just base my solution around these metrics?
 
 ## Assumptions
 
--
+- Security isn't an issue and has already been configured through session and CSRF authentication tokens as well as DB, model, and frontend-level constraints. We can discuss possible implementations of security measures at the end if needed.
+
+- Contractors and subcontractors aren't located too far away from any data centers in place. We can discuss solutions to this if this is an important consideration to make.
 
 ## Basic Setup
 
@@ -43,7 +45,6 @@ The main issue is we have uploaded files and other data (about GCs, subs, projec
 
 - AWS S3 storage for individual files:
   - Unlimited file storage and incredible scalability
-  - 5GB limit for PUT, 5TB limit for file (if you use multi-part uploading)
   - Easily configurable with other AWS services
 
 So for this DB, we can choose a NoSQL vs. SQL database. NoSQL is more scalable.
@@ -55,14 +56,30 @@ So for this DB, we can choose a NoSQL vs. SQL database. NoSQL is more scalable.
 
 # Deliverable 1: File upload
 
-**Problem**: when a user makes requests, it has to visit both the S3 bucket and the DB in some sort of order. The problem is, blob storage generally gives you metadata that you'd want access to without having to query that blob storage (file names/paths, last updated,etc.). Some information would probably be reduplicated. E.g.:
+**Problem**: when a user makes requests it has to upload the file to S3, return info about the uploaded object, then persist that information to the database under that project. This potentially slows things down because every upload request requires multiple transactions.
 
-What comes automatically with S3 upload: folder_name, file_name,
+What comes back as payload from S3 upload: folder_name, file_name, file_type, file_size, last_updated, etc.
 
-2.) Possible solution: store it all in one DB
+Possible solution: store it all in one DB
 
 - Store the bites of a dile directly in a column / record on a table / collection
 - Add whatever metadata you want to the table / collection
+
+**What if my file is too large?**
+
+- S3 has 5GB limit for PUT, 5TB limit for file
+- Use multi-part uploading to split upload into smaller byte chunks
+- Each mini-upload returns an ETag that can be used to determine the order of byte chunks
+
+**What if I want multi-file upload?**
+
+- Just send multiple files over and have the transaction iterate over each. Two options for persisting:
+  1.) Wait until all files have uploaded successfully. Roll back any uploads if one fails. (Promise.all)
+  2.) (More reasonable): Update information in DB as each resolves. Ones that fail ned to be individually re-uploaded
+
+**What if I accidentally overwrite a file?**
+
+- S3 offers versioning, which allows you to keep multiple variants of an object in the same bucket. You can easily recover from unintended user actions and application failures this way.
 
 # Deliverable 2: File download
 
@@ -73,14 +90,15 @@ Caching. Using a cache like Redis or Memcache can vastly speed up read times by 
 We could cache projects that
 
 **How can I speed up downloads?**
+Using ETags for file requests improves caching speed. The server can just check whether the version of a file is the same as a previously downloaded version (rather than all of its contents) and access a cached version of the file if it's been downloaded before.
 
 **So I just keep storing files forever? Do I ever want to migrate content off AWS or delete it?**
 
 **How do I backup my data?**
-Backup data to a data warehouse every hour
+Backup data to a data warehouse every hour. Pipe data from S3 into a data warehouse (e.g. Alooma). Restore data from the warehouse if there are problems with S3.
 
 **What about security and authentication?**
-Each request will be signed with CSRF
+We can assume that auth is already embedded in the app. Each request will be signed with CSRF.
 
 **What if my users are all far away from each other?**
 We need multiple data centers to distribute the load geographically. This will improve read time at the expense of storing more data in more places. This is best managed through a CDN or Edge interface (AWS Cloudfront or AWS Lambda@Edge)
