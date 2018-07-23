@@ -5,11 +5,13 @@
 - Ask clarifying questions
 - Read vs. Write oriented
 
+Main idea: Contractors can upload files for their projects. Subcontractors can download these files. Data is collected on how people use this file service. How would you design this system?
+
 ## Clarifying questions
 
 - What is a "project" exactly? Can you specify start and end dates for bidding? Can you specify start and stop dates for that project?
 
-- “Equip GCs with the means to SEND files to their subs.” The image shows a contractor is able to have folders of their own. How is access granted to subs and who can actually see the project? Or do all subs have access to all projects? Does the GC literally _send_ files over to the subs?
+- “Equip GCs with the means to SEND files to their subs.” The image in the briefing PDF shows a contractor is able to have folders of their own. How is access granted to subs and who can actually see the project? Or do all subs have access to all projects? Does the GC literally _send_ files over to the subs?
 
 - There are [primary success metrics](success-metrics) at the bottom. Is it my goal to describe how I would track these pieces of data or should I just base my solution around these metrics?
 
