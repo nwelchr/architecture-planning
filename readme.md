@@ -18,9 +18,13 @@
 
 ## Basic Setup
 
-### Client
+My setup has a client layer that will allow the user to interact with the rest of my application. I will have a server layer that handles routing of requests and backend logic. I will also have a persistence layer that takes care of any data I want to save, namely files and information about my models (contractors, projects, bids, files, etc.). We can assume this is already set up so that our file architecture can be integrated into it. To get into a bit more detail about each layer:
 
-### Server
+### Client:
+
+Self-explanatory.
+
+### Server:
 
 **Routes**:
 
@@ -36,12 +40,20 @@
 - `GET /:project_id/:folder_id/download` - download file(s)
 - `DELETE /:project_id/:folder_id/:file_id` - delete file(s)
 
-### Database
+**How do I handle all these requests coming in? We're talking about terabytes of file transfers and tens of thousands of construction companies interacting with our app in real time.**
+
+Scaling!!! Smaller startups would normally use vertical scaling to get an initial proof of concept done, but you guys are already a Series B company so we'll be looking into scaling horizontally, i.e. more servers!
+
+- Good way to do this: Amazon EC2. You guys are still growing fast, so you'll need something that can scale with your website without you needing to configure everything.
+
+**Okay, now I have more servers... but how do I make sure they're all synchronized? What happens if some server crashes?**
+Use a metadata manager.
+
+### Database:
 
 The main issue is we have uploaded files and other data (about GCs, subs, projects, bids, etc.).
 
-**Two possibilities**:
-1.) Blob storage (AWS S3) + DB (MongoDB, DynamoDB, etc.)
+Blob storage (AWS S3) + DB (MongoDB, DynamoDB, etc.)
 
 - AWS S3 storage for individual files:
   - Unlimited file storage and incredible scalability
@@ -65,6 +77,23 @@ Possible solution: store it all in one DB
 - Store the bites of a dile directly in a column / record on a table / collection
 - Add whatever metadata you want to the table / collection
 
+**How do I ensure that the GC is the only one with write access to a project?**
+`project.creatorId === currentUser.id`
+
+**How do we make sure there are no collisions in filenames?**
+
+- Because they are persisted to different folders, ensure you're uploading them into the right folder, so if two projects have a file or folder with the same name it's ok!
+
+Three possibilities for file names in the same folder:
+
+- Persist as Date.now + file_name (e.g. '19208310floor_plans.png') to ensure different file names
+- Use versioning with ETags (same key, multiple versions of a file under that key, organized by most recently updated)
+- Allow the the file to be overwritten for space purposes
+
+**What if I accidentally overwrite a file, or want to update files while having access to previous versions?**
+
+- Same as above: S3 offers versioning, which allows you to keep multiple variants of an object in the same bucket. You can easily recover from unintended user actions and application failures this way.
+
 **What if my file is too large?**
 
 - S3 has 5GB limit for PUT, 5TB limit for file
@@ -77,13 +106,15 @@ Possible solution: store it all in one DB
   1.) Wait until all files have uploaded successfully. Roll back any uploads if one fails. (Promise.all)
   2.) (More reasonable): Update information in DB as each resolves. Ones that fail ned to be individually re-uploaded
 
-**What if I accidentally overwrite a file?**
-
-- S3 offers versioning, which allows you to keep multiple variants of an object in the same bucket. You can easily recover from unintended user actions and application failures this way.
-
 # Deliverable 2: File download
 
-- Additional problems:
+Two possibilities:
+1.)
+
+**What if I want multi/all-file download?**
+Folders and files are all considered objects in S3 (even though it might not seem that way to us!). There are libraries out there that allow you to created a zipped file containing a directory. You make a `GET` request to obtain all of the files (or the whole project) from S3, iterate over those objects, and append them to a zipped file. Then just download that file.
+
+# Additional problems
 
 **How do I improve read times on my site?**
 Caching. Using a cache like Redis or Memcache can vastly speed up read times by eliminating the need to query the entire database.
