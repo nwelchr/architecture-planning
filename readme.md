@@ -2,6 +2,8 @@
 
 ## Clarifying questions
 
+- What is a project? Can you specify start and end dates for bidding? Can you specify start and stop dates for that project's ?
+
 - “Equip GCs with the means to SEND files to their subs.” The image shows a contractor is able to have folders of their own. How is access granted to subs and who can actually see the project?
 
 - Where are contractors and subcontractors located? Is it just in the SF area or is it worldwide?
@@ -19,6 +21,8 @@
 ### Server
 
 **Routes**:
+
+**_ASSUMPTION_**: There is already some type of authentication in place
 
 **CLARIFYING QUESTION**: Do I need to be able to delete files?
 
@@ -45,14 +49,15 @@ The main issue is we have uploaded files and other data (about GCs, subs, projec
 So for this DB, we can choose a NoSQL vs. SQL database. NoSQL is more scalable.
 
 - Sacrifices [acid](ACID-compliancy) for greater freedom
+- No joins / transactions, lower latency and faster write sped
 - Easier to configure. SQL databases can scale, but require experts
-- Sharding
+- Sharding and horizontal scaling
 
 ============================================================
 
 # Deliverable 1: File upload
 
-Will get into this later when we talk about upload and download, but: when a user makes requests, it has to visit both the S3 bucket and the DB in some sort of order. The problem is, blob storage generally gives you metadata that you'd want access to without having to query that blob storage (file names/paths, last updated,etc.). Some information would probably be reduplicated. E.g.:
+**Problem**: when a user makes requests, it has to visit both the S3 bucket and the DB in some sort of order. The problem is, blob storage generally gives you metadata that you'd want access to without having to query that blob storage (file names/paths, last updated,etc.). Some information would probably be reduplicated. E.g.:
 
 What comes automatically with S3 upload: folder_name, file_name,
 
@@ -64,6 +69,27 @@ What comes automatically with S3 upload: folder_name, file_name,
 ============================================================
 
 # Deliverable 2: File download
+
+============================================================
+
+- Additional problems:
+
+**How do I improve read times on my site?**
+Caching. Using a cache like Redis or Memcache can vastly speed up read times by eliminating the need to query the entire database.
+We could cache projects that
+
+**How can I speed up downloads?**
+
+**So I just keep storing files forever? Do I ever want to migrate content off AWS or delete it?**
+
+**How do I backup my data?**
+Backup data to a data warehouse every hour
+
+**What about security and authentication?**
+Each request will be signed with CSRF
+
+**What if my users are all far away from each other?**
+We need multiple data centers to distribute the load geographically. This will improve read time at the expense of storing more data in more places. This is best managed through a CDN or Edge interface (AWS Cloudfront or AWS Lambda@Edge)
 
 ============================================================
 
