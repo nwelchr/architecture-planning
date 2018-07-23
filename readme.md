@@ -53,8 +53,6 @@ So for this DB, we can choose a NoSQL vs. SQL database. NoSQL is more scalable.
 - Easier to configure. SQL databases can scale, but require experts
 - Sharding and horizontal scaling
 
-============================================================
-
 # Deliverable 1: File upload
 
 **Problem**: when a user makes requests, it has to visit both the S3 bucket and the DB in some sort of order. The problem is, blob storage generally gives you metadata that you'd want access to without having to query that blob storage (file names/paths, last updated,etc.). Some information would probably be reduplicated. E.g.:
@@ -66,11 +64,7 @@ What comes automatically with S3 upload: folder_name, file_name,
 - Store the bites of a dile directly in a column / record on a table / collection
 - Add whatever metadata you want to the table / collection
 
-============================================================
-
 # Deliverable 2: File download
-
-============================================================
 
 - Additional problems:
 
@@ -90,8 +84,6 @@ Each request will be signed with CSRF
 
 **What if my users are all far away from each other?**
 We need multiple data centers to distribute the load geographically. This will improve read time at the expense of storing more data in more places. This is best managed through a CDN or Edge interface (AWS Cloudfront or AWS Lambda@Edge)
-
-============================================================
 
 # Extra notes
 
